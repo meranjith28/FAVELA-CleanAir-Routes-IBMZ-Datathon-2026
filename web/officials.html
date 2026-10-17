@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CleanAir Routes · Officials</title>
+<style>
+:root{--bg:#f6f7f4;--panel:#fff;--ink:#1d2421;--muted:#5d6762;--line:#dfe3df;--accent:#0f6e5c}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans Tamil",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:19px;margin:0}.sub{color:var(--muted);font-size:12px}
+.ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button,select,a.btn{padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;color:var(--ink);text-decoration:none;cursor:pointer}
+a.btn.primary,button.primary{background:var(--accent);color:#fff;border:0}
+.clock{background:#eef3f0;border-radius:8px;padding:7px 12px}
+.tag{font-size:11px;padding:2px 6px;border-radius:99px;background:#dfeee8;color:var(--accent);font-weight:600}
+main{padding:18px 22px;max-width:1500px;margin:0 auto}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.tile .k{font-size:12px;color:var(--muted)}.tile .v{font-size:26px;font-weight:700;margin-top:2px}.tile .s{font-size:12px;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 4px}.hint{font-size:12px;color:var(--muted);margin:2px 0 10px}
+.heat{overflow-x:auto}
+table{border-collapse:separate;border-spacing:2px;font-size:11px}
+th{font-weight:600;color:var(--muted);padding:2px 4px;white-space:nowrap}
+th.st{text-align:left;min-width:150px;color:var(--ink);font-size:12px}
+td.c{width:34px;height:26px;text-align:center;border-radius:4px;color:#1d2421;font-variant-numeric:tabular-nums}
+td.c.dark{color:#fff}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}.legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+.alerts{display:grid;gap:10px}
+.alert{border:1px solid var(--line);border-left:6px solid #ccc;border-radius:0 10px 10px 0;padding:10px 12px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.alert .meta{font-size:12px;color:var(--muted);margin-bottom:3px}
+.alert p{margin:0}
+.empty{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 id="title">Health officials' dashboard</h1>
+    <div class="sub" id="subtitle">CleanAir Routes · 24-hour PM2.5 outlook for Chennai's monitoring stations · running on IBM LinuxONE</div></div>
+  <div class="ctrl">
+    <span class="clock"><span id="nowlbl">Now</span>: <b id="now">–</b> <span class="tag">replay</span></span>
+    <button id="tick">+1 h ▶</button>
+    <select id="lang"><option value="en">English</option><option value="ta">தமிழ்</option></select>
+    <a class="btn" href="/api/officials.csv" id="csv">⬇ CSV</a>
+    <a class="btn primary" href="/" id="back">← Route planner</a>
+  </div>
+</header>
+<main>
+  <div class="tiles" id="tiles"></div>
+  <div class="card">
+    <h2 id="heatTitle">Next 24 hours by station</h2>
+    <p class="hint" id="heatHint">Forecast PM2.5 (µg/m³) per hour, coloured by India's National AQI category. NAQI is defined on 24-hour averages; it is used here hour by hour as an early-warning guide.</p>
+    <div class="heat"><table id="heat"></table></div>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div class="card" id="bulletinCard" style="display:none">
+    <h2>✨ AI situation bulletin</h2>
+    <p class="hint">Written by IBM Granite running locally on LinuxONE, using only the forecast facts on this page.</p>
+    <div id="bulletin"></div>
+  </div>
+  <div class="card">
+    <h2 id="alertTitle">Ready-to-send public alerts</h2>
+    <p class="hint" id="alertHint">Generated automatically from the forecast. "Expected" uses the median forecast; "possible" uses the calibrated worst case (p90) as an early heads-up for sensitive groups.</p>
+    <div class="alerts" id="alerts"></div>
+  </div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const CATS=[["Good","நல்லது","#2e9d4f"],["Satisfactory","திருப்திகரமானது","#9ccc3c"],["Moderate","மிதமானது","#f2c12e"],["Poor","மோசமானது","#ef8a2b"],["Very Poor","மிகவும் மோசமானது","#d7332f"],["Severe","கடுமையானது","#7e1f1f"]];
+const L={en:{now:"Now",title:"Health officials' dashboard",tiles:["Stations monitored","Stations reaching Poor or worse (next 24 h)","First Poor hour","Worst expected"],none:"None expected",
+  copy:"Copy",copied:"Copied ✓",expected:"Expected",possible:"Possible (worst case)",noalerts:"No alerts: air is expected to stay Satisfactory or better at all stations for the next 24 hours.",
+  heatTitle:"Next 24 hours by station",alertTitle:"Ready-to-send public alerts",back:"← Route planner",
+  sub:"CleanAir Routes · 24-hour PM2.5 outlook for Chennai's monitoring stations · running on IBM LinuxONE",
+  heatHint:"Forecast PM2.5 (µg/m³) per hour, coloured by India's National AQI category. NAQI is defined on 24-hour averages; it is used here hour by hour as an early-warning guide.",
+  alertHint:"Generated automatically from the forecast. \"Expected\" uses the median forecast; \"possible\" uses the calibrated worst case (p90) as an early heads-up for sensitive groups."},
+ ta:{now:"இப்போது",title:"சுகாதார அதிகாரிகளுக்கான டாஷ்போர்டு",tiles:["கண்காணிப்பு நிலையங்கள்","மோசமான நிலையை அடையும் நிலையங்கள் (24 மணி நேரம்)","முதல் மோசமான நேரம்","அதிக மாசுபாடு எதிர்பார்ப்பு"],none:"எதுவும் இல்லை",
+  copy:"நகலெடு",copied:"நகலெடுக்கப்பட்டது ✓",expected:"எதிர்பார்க்கப்படுகிறது",possible:"சாத்தியம் (மோசமான நிலை)",noalerts:"எச்சரிக்கை இல்லை: அடுத்த 24 மணி நேரத்திற்கு அனைத்து நிலையங்களிலும் காற்றின் தரம் திருப்திகரமாக இருக்கும் என எதிர்பார்க்கப்படுகிறது.",
+  heatTitle:"நிலையவாரியாக அடுத்த 24 மணி நேரம்",alertTitle:"அனுப்பத் தயாரான பொது எச்சரிக்கைகள்",back:"← வழித் திட்டம்",
+  sub:"CleanAir Routes · சென்னை கண்காணிப்பு நிலையங்களுக்கான 24 மணி நேர PM2.5 முன்கணிப்பு · IBM LinuxONE-இல் இயங்குகிறது",
+  heatHint:"ஒவ்வொரு மணி நேரத்திற்குமான PM2.5 முன்கணிப்பு (µg/m³), இந்திய தேசிய AQI வகைப்படி வண்ணமிடப்பட்டுள்ளது. AQI 24 மணி நேர சராசரிக்கு வரையறுக்கப்பட்டது; இங்கு முன்னெச்சரிக்கை வழிகாட்டியாக மணிநேர அடிப்படையில் பயன்படுத்தப்படுகிறது.",
+  alertHint:"முன்கணிப்பிலிருந்து தானாக உருவாக்கப்பட்டவை. \"எதிர்பார்க்கப்படுகிறது\" என்பது சராசரி முன்கணிப்பு; \"சாத்தியம்\" என்பது உணர்திறன் மிக்கவர்களுக்கான மோசமான நிலைக் கணிப்பு (p90) அடிப்படையிலான முன்னெச்சரிக்கை."}};
+const dark=c=>["#d7332f","#7e1f1f","#2e9d4f"].includes(c);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+async function load(){
+  const lang=$('lang').value,T=L[lang];
+  const d=await (await fetch('/api/officials?lang='+lang)).json();
+  $('now').textContent=d.now.replace('T',' ').slice(0,16);$('nowlbl').textContent=T.now;$('title').textContent=T.title;
+  $('heatTitle').textContent=T.heatTitle;$('subtitle').textContent=T.sub;$('heatHint').textContent=T.heatHint;$('alertHint').textContent=T.alertHint;$('alertTitle').textContent=T.alertTitle;$('back').textContent=T.back;
+  const s=d.summary;
+  const tiles=[[s.stations,""],[s.stations_poor,""],[s.first_poor||T.none,""],[s.worst_peak!=null?`${s.worst_peak} µg/m³`:"–",`${s.worst_station||""} · ${s.worst_time||""} · ${s.worst_cat||""}`]];
+  $('tiles').innerHTML=tiles.map((t,i)=>`<div class="tile"><div class="k">${T.tiles[i]}</div><div class="v">${esc(t[0])}</div><div class="s">${esc(t[1])}</div></div>`).join('');
+  let h=`<tr><th class="st"></th>${d.hours.map((x,i)=>`<th>${i?'+'+i:T.now}<br>${x}:00</th>`).join('')}</tr>`;
+  for(const st of d.stations){
+    h+=`<tr><th class="st">${esc(st.station)}<div class="hint" style="margin:0">peak ${st.peak} · ${esc(st.peak_time)}</div></th>`+
+      st.median.map((v,i)=>`<td class="c ${dark(st.colors[i])?'dark':''}" style="background:${st.colors[i]}" title="${esc(st.station)} ${esc(d.day_labels[i])}: ${v} µg/m³ (p90 ${st.p90[i]})">${Math.round(v)}</td>`).join('')+'</tr>';
+  }
+  $('heat').innerHTML=h;
+  $('legend').innerHTML=CATS.map(c=>`<span><i style="background:${c[2]}"></i>${lang=='ta'?c[1]:c[0]}</span>`).join('');
+  $('alerts').innerHTML=d.alerts.length?d.alerts.map((a,i)=>`<div class="alert" style="border-left-color:${a.color}">
+      <div><div class="meta"><b style="color:${a.color}">${a.kind=='expected'?T.expected:T.possible}</b> · ${esc(a.station)} · ${esc(a.start)} → ${esc(a.end)}</div><p id="al${i}">${esc(a.text)}</p></div>
+      <button data-i="${i}">${T.copy}</button></div>`).join(''):`<p class="empty">${T.noalerts}</p>`;
+  document.querySelectorAll('.alert button').forEach(b=>b.onclick=async()=>{
+    const t=$('al'+b.dataset.i).textContent;
+    try{await navigator.clipboard.writeText(t)}catch(e){const r=document.createRange();r.selectNodeContents($('al'+b.dataset.i));getSelection().removeAllRanges();getSelection().addRange(r);document.execCommand('copy')}
+    b.textContent=T.copied;setTimeout(()=>b.textContent=T.copy,1500)});
+}
+let BTOKEN=0;
+async function bulletin(){
+  const my=++BTOKEN,lang=$('lang').value;
+  while(my===BTOKEN){
+    let o;try{o=await (await fetch('/api/officials/bulletin?lang='+lang)).json()}catch(e){return}
+    if(o.status==='unavailable'){$('bulletinCard').style.display=lang==='ta'?'block':'none';
+      $('bulletin').innerHTML=lang==='ta'?'<p class="hint">AI bulletin is available in English.</p>':'';return}
+    $('bulletinCard').style.display='block';
+    if(o.status==='working'){$('bulletin').innerHTML=`<p class="hint">IBM Granite is writing the bulletin… ${o.elapsed_s||0} s (about 1–2 minutes)</p>`;
+      await new Promise(r=>setTimeout(r,4000));continue}
+    $('bulletin').innerHTML=o.text?`<p style="margin:0">${esc(o.text)}</p><p class="hint" style="margin-top:6px">${esc(o.provider)} · ${((o.ms||0)/1000).toFixed(0)} s</p>`:'<p class="hint">IBM Granite could not write a bulletin this time.</p>';
+    return;
+  }
+}
+$('tick').onclick=async()=>{await fetch('/api/tick',{method:'POST'});load();bulletin()};
+$('lang').onchange=()=>{load();bulletin()};
+load();bulletin();
+</script>
+</body>
+</html>

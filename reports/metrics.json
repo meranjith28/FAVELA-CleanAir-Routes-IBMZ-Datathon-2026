@@ -1,0 +1,280 @@
+{
+  "test_start": "2025-12-01 00:00:00",
+  "test_end": "2026-02-28 23:00:00",
+  "test_label": "01 Dec 2025 - 28 Feb 2026",
+  "horizons": {
+    "1": {
+      "n_train": 77143,
+      "n_test": 9753,
+      "persistence": {
+        "MAE": 10.69,
+        "RMSE": 42.85,
+        "AQI_cat_acc": 0.799
+      },
+      "same_hour_yesterday": {
+        "MAE": 24.51,
+        "RMSE": 65.51,
+        "AQI_cat_acc": 0.525
+      },
+      "ridge": {
+        "MAE": 1309.13,
+        "RMSE": 43425.75,
+        "AQI_cat_acc": 0.625
+      },
+      "hybrid_model_weight": 0.55,
+      "train_seconds": 2.0,
+      "hgb": {
+        "MAE": 11.17,
+        "RMSE": 47.41,
+        "AQI_cat_acc": 0.792
+      },
+      "hybrid": {
+        "MAE": 10.34,
+        "RMSE": 40.41,
+        "AQI_cat_acc": 0.806
+      },
+      "p90_scale": 1.057,
+      "p90_coverage_linear": 0.878,
+      "p90_coverage_uncalibrated": 0.867,
+      "p90_coverage": 0.921,
+      "skill_vs_persistence_%": 3.3,
+      "best": "hybrid"
+    },
+    "3": {
+      "n_train": 76270,
+      "n_test": 9645,
+      "persistence": {
+        "MAE": 18.41,
+        "RMSE": 57.74,
+        "AQI_cat_acc": 0.657
+      },
+      "same_hour_yesterday": {
+        "MAE": 24.28,
+        "RMSE": 64.44,
+        "AQI_cat_acc": 0.525
+      },
+      "ridge": {
+        "MAE": 138.81,
+        "RMSE": 5755.57,
+        "AQI_cat_acc": 0.554
+      },
+      "hybrid_model_weight": 0.95,
+      "train_seconds": 2.0,
+      "hgb": {
+        "MAE": 16.63,
+        "RMSE": 54.39,
+        "AQI_cat_acc": 0.661
+      },
+      "hybrid": {
+        "MAE": 16.36,
+        "RMSE": 53.4,
+        "AQI_cat_acc": 0.666
+      },
+      "p90_scale": 1.125,
+      "p90_coverage_linear": 0.838,
+      "p90_coverage_uncalibrated": 0.821,
+      "p90_coverage": 0.912,
+      "skill_vs_persistence_%": 11.1,
+      "best": "hybrid"
+    },
+    "6": {
+      "n_train": 75473,
+      "n_test": 9516,
+      "persistence": {
+        "MAE": 23.18,
+        "RMSE": 63.64,
+        "AQI_cat_acc": 0.565
+      },
+      "same_hour_yesterday": {
+        "MAE": 24.44,
+        "RMSE": 64.56,
+        "AQI_cat_acc": 0.523
+      },
+      "ridge": {
+        "MAE": 131.45,
+        "RMSE": 5824.49,
+        "AQI_cat_acc": 0.521
+      },
+      "hybrid_model_weight": 1.0,
+      "train_seconds": 2.1,
+      "hgb": {
+        "MAE": 19.24,
+        "RMSE": 56.08,
+        "AQI_cat_acc": 0.61
+      },
+      "hybrid": {
+        "MAE": 19.24,
+        "RMSE": 56.08,
+        "AQI_cat_acc": 0.61
+      },
+      "p90_scale": 1.148,
+      "p90_coverage_linear": 0.826,
+      "p90_coverage_uncalibrated": 0.818,
+      "p90_coverage": 0.912,
+      "skill_vs_persistence_%": 17.0,
+      "best": "hgb"
+    },
+    "12": {
+      "n_train": 75309,
+      "n_test": 9297,
+      "persistence": {
+        "MAE": 26.17,
+        "RMSE": 68.18,
+        "AQI_cat_acc": 0.509
+      },
+      "same_hour_yesterday": {
+        "MAE": 23.95,
+        "RMSE": 60.57,
+        "AQI_cat_acc": 0.523
+      },
+      "ridge": {
+        "MAE": 48.4,
+        "RMSE": 1080.05,
+        "AQI_cat_acc": 0.504
+      },
+      "hybrid_model_weight": 1.0,
+      "train_seconds": 2.1,
+      "hgb": {
+        "MAE": 22.66,
+        "RMSE": 52.66,
+        "AQI_cat_acc": 0.527
+      },
+      "hybrid": {
+        "MAE": 22.66,
+        "RMSE": 52.66,
+        "AQI_cat_acc": 0.527
+      },
+      "p90_scale": 1.151,
+      "p90_coverage_linear": 0.882,
+      "p90_coverage_uncalibrated": 0.844,
+      "p90_coverage": 0.914,
+      "skill_vs_persistence_%": 13.4,
+      "best": "hgb"
+    },
+    "24": {
+      "n_train": 74369,
+      "n_test": 9019,
+      "persistence": {
+        "MAE": 24.1,
+        "RMSE": 59.8,
+        "AQI_cat_acc": 0.529
+      },
+      "same_hour_yesterday": {
+        "MAE": 24.1,
+        "RMSE": 59.8,
+        "AQI_cat_acc": 0.529
+      },
+      "ridge": {
+        "MAE": 48.95,
+        "RMSE": 850.05,
+        "AQI_cat_acc": 0.48
+      },
+      "hybrid_model_weight": 0.9,
+      "train_seconds": 2.1,
+      "hgb": {
+        "MAE": 24.29,
+        "RMSE": 54.16,
+        "AQI_cat_acc": 0.454
+      },
+      "hybrid": {
+        "MAE": 23.62,
+        "RMSE": 52.77,
+        "AQI_cat_acc": 0.474
+      },
+      "p90_scale": 1.137,
+      "p90_coverage_linear": 0.763,
+      "p90_coverage_uncalibrated": 0.753,
+      "p90_coverage": 0.846,
+      "skill_vs_persistence_%": 2.0,
+      "best": "hybrid"
+    }
+  },
+  "platform": {
+    "machine": "s390x",
+    "system": "Linux",
+    "python": "3.12.15",
+    "node": "mobilityroute-ai"
+  },
+  "loso": {
+    "by_power": {
+      "0.0": {
+        "MAE": 26.22,
+        "n": 11790
+      },
+      "0.5": {
+        "MAE": 28.04,
+        "n": 11790
+      },
+      "1.0": {
+        "MAE": 30.23,
+        "n": 11790
+      },
+      "2.0": {
+        "MAE": 32.82,
+        "n": 11790
+      },
+      "3.0": {
+        "MAE": 34.18,
+        "n": 11790
+      }
+    },
+    "best_power": 0.0,
+    "per_station": {
+      "Arumbakkam": {
+        "0.0": 28.77,
+        "0.5": 29.17,
+        "1.0": 29.65,
+        "2.0": 30.84,
+        "3.0": 32.3
+      },
+      "Kodungaiyur": {
+        "0.0": 22.68,
+        "0.5": 23.22,
+        "1.0": 23.72,
+        "2.0": 24.43,
+        "3.0": 24.87
+      },
+      "Manali": {
+        "0.0": 38.83,
+        "0.5": 39.77,
+        "1.0": 41.01,
+        "2.0": 41.94,
+        "3.0": 42.07
+      },
+      "Manali Village": {
+        "0.0": 16.98,
+        "0.5": 24.62,
+        "1.0": 33.69,
+        "2.0": 39.85,
+        "3.0": 40.6
+      },
+      "Perungudi": {
+        "0.0": 19.34,
+        "0.5": 20.65,
+        "1.0": 22.66,
+        "2.0": 28.01,
+        "3.0": 32.18
+      },
+      "Royapuram": {
+        "0.0": 22.85,
+        "0.5": 23.93,
+        "1.0": 25.04,
+        "2.0": 27.18,
+        "3.0": 28.76
+      },
+      "Velachery Res. Area": {
+        "0.0": 34.38,
+        "0.5": 35.16,
+        "1.0": 36.01,
+        "2.0": 37.55,
+        "3.0": 38.44
+      }
+    },
+    "hours_sampled": 1764,
+    "overall": {
+      "IDW_MAE": 26.22,
+      "citymean_MAE": 26.22,
+      "best_power": 0.0
+    }
+  }
+}

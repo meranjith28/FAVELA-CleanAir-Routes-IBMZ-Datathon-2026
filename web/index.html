@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CleanAir Routes · Chennai</title>
+<link rel="stylesheet" href="/web/vendor/leaflet.css">
+<script src="/web/vendor/leaflet.js"></script>
+<script src="/web/vendor/chart.umd.js"></script>
+<style>
+:root{--bg:#f6f7f4;--panel:#fff;--ink:#1d2421;--muted:#5d6762;--line:#dfe3df;--accent:#0f6e5c;--fast:#6b7280;--clean:#0f6e5c;--bal:#2563eb}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.app{display:grid;grid-template-columns:380px 1fr;height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:18px}
+h1{font-size:19px;margin:0}.sub{color:var(--muted);font-size:12px;margin:2px 0 14px}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+select,button{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit}
+button.primary{background:var(--accent);color:#fff;border:0;font-weight:600;cursor:pointer;margin-top:12px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.clock{display:flex;justify-content:space-between;align-items:center;background:#eef3f0;border-radius:8px;padding:8px 10px;font-size:13px}
+.clock button{width:auto;padding:4px 10px}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px}
+.adv{border-left:6px solid #ccc}.big{font-size:22px;font-weight:700}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:5px 4px;text-align:right;border-bottom:1px solid var(--line)}td:first-child,th:first-child{text-align:left}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.hint{font-size:12px;color:var(--muted)}#map{height:100vh}
+.tag{font-size:11px;padding:2px 6px;border-radius:99px;background:#eef3f0;color:var(--accent);font-weight:600}
+@media(max-width:800px){.app{grid-template-columns:1fr;height:auto}#map{height:60vh}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>CleanAir Routes</h1>
+  <div class="sub">PM2.5 forecast + lowest-exposure routing · Chennai · running on IBM LinuxONE</div>
+  <a href="/officials" style="display:block;margin:-6px 0 12px;font-size:13px;color:var(--accent);font-weight:600">Health officials' dashboard →</a>
+  <div class="clock"><span>Now: <b id="now">–</b> <span class="tag" id="modetag">replay</span></span><button id="tick">+1 h ▶</button></div>
+  <div class="row">
+    <div><label>Who is travelling?</label><select id="profile"></select></div>
+    <div><label>Mode</label><select id="mode"><option value="walk">Walk</option><option value="cycle">Cycle</option></select></div>
+  </div>
+  <div class="row">
+    <div><label>Leave in</label><select id="hour"></select></div>
+    <div><label>Advice language</label><select id="lang"><option value="en">English</option><option value="ta">தமிழ்</option></select></div>
+  </div>
+  <p class="hint">Click the map to set <b>start</b>, click again for <b>destination</b>.</p>
+  <button class="primary" id="go" disabled>Find routes</button>
+  <div id="result"></div>
+  <div class="card"><b>Station forecast (next 24 h)</b><canvas id="fc" height="170"></canvas>
+    <select id="stsel" style="margin-top:6px"></select>
+    <p class="hint">Line = forecast median, band = p90 worst-likely, dots = what actually happened (replay).</p></div>
+  <div class="card" id="metrics"></div>
+</aside>
+<div id="map"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);let META,FC,pts=[],layers=[],stLayer,chart,timelineChart;
+const map=L.map('map').setView([12.99,80.225],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+const cat=v=>v<=30?'Good':v<=60?'Satisfactory':v<=90?'Moderate':v<=120?'Poor':v<=250?'Very Poor':'Severe';
+const col=v=>META.colors[cat(v)];
+async function j(u,o){const r=await fetch(u,o);return r.json()}
+async function init(){
+  META=await j('/api/meta');
+  if(META.live){$('modetag').textContent='live';$('modetag').title=META.live_status;$('tick').textContent='Refresh ⟳'}
+  for(const[k,p]of Object.entries(META.profiles))$('profile').add(new Option(p.label,k));
+  for(let h=0;h<=24;h+=1)$('hour').add(new Option(h?`+${h} h`:'Now',h));
+  drawAreas();
+  await refresh();loadMetrics();
+}
+function inArea(lat,lon){
+  for(const a of Object.values(META.areas||{})){const[s,w,n,e]=a.bbox;if(lat>=s&&lat<=n&&lon>=w&&lon<=e)return a.label}
+  return null;
+}
+function drawAreas(){
+  const boxes=[];
+  for(const a of Object.values(META.areas||{})){
+    const[s,w,n,e]=a.bbox,b=[[s,w],[n,e]];boxes.push(...b);
+    L.rectangle(b,{color:'#0f6e5c',weight:2,dashArray:'6,6',fill:true,fillOpacity:.04,interactive:false}).addTo(map);
+    L.marker([n,(w+e)/2],{interactive:false,icon:L.divIcon({className:'',iconSize:null,
+      html:`<div style="transform:translate(-50%,-110%);white-space:nowrap;background:#0f6e5c;color:#fff;font:600 12px system-ui;padding:3px 8px;border-radius:6px">Routes: ${a.label}</div>`})}).addTo(map);
+  }
+  if(boxes.length)map.fitBounds(L.latLngBounds(boxes).pad(.05));
+}
+async function refresh(){
+  FC=await j('/api/forecast');$('now').textContent=FC.now.replace('T',' ').slice(0,16);
+  if(stLayer)map.removeLayer(stLayer);stLayer=L.layerGroup().addTo(map);
+  const sel=$('stsel'),cur=sel.value;sel.innerHTML='';
+  for(const[s,v]of Object.entries(FC.stations)){
+    sel.add(new Option(s,s));if(!v.coords)continue;
+    L.circleMarker(v.coords,{radius:11,color:'#fff',weight:2,fillColor:col(v.median[0]),fillOpacity:.95})
+      .bindTooltip(`<b>${s}</b><br>PM2.5 now ${v.median[0]} µg/m³ (${v.now_cat})<br>+6 h: ${v.median[6]} · p90 ${v.p90[6]}`).addTo(stLayer);
+  }
+  if(cur)sel.value=cur;drawChart();
+}
+function drawChart(){
+  const v=FC.stations[$('stsel').value];if(!v)return;const labels=[...Array(25).keys()].map(h=>'+'+h);
+  const data={labels,datasets:[
+    {label:'p90',data:v.p90,borderColor:'transparent',backgroundColor:'rgba(15,110,92,.15)',fill:'+1',pointRadius:0},
+    {label:'forecast',data:v.median,borderColor:'#0f6e5c',pointRadius:0,tension:.3},
+    {label:'observed',data:[v.median[0],...v.observed_next],borderColor:'transparent',backgroundColor:'#1d2421',pointRadius:2,showLine:false}]};
+  if(chart)chart.destroy();
+  chart=new Chart($('fc'),{type:'line',data,options:{plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'PM2.5 µg/m³'}}}}});
+}
+$('stsel').onchange=drawChart;
+$('tick').onclick=async()=>{await j('/api/tick',{method:'POST'});await refresh();if(pts.length==2)go()};
+map.on('click',e=>{
+  if(!inArea(e.latlng.lat,e.latlng.lng)){
+    $('result').innerHTML='<div class="card" style="border-color:#ef8a2b"><b>Outside the route areas</b><p class="hint">Routes work inside the dashed green boxes. Please click inside one of them.</p></div>';return}
+  if(pts.length==2){pts=[];clear()}pts.push([e.latlng.lat,e.latlng.lng]);
+  layers.push(L.marker(e.latlng).addTo(map).bindTooltip(pts.length==1?'Start':'Destination',{permanent:true}));$('go').disabled=pts.length<2;if(pts.length==2)go()});
+function clear(){layers.forEach(l=>map.removeLayer(l));layers=[]}
+$('go').onclick=go;['profile','mode','hour','lang'].forEach(id=>$(id).onchange=()=>pts.length==2&&go());
+async function go(){
+  $('result').innerHTML='<p class="hint">Computing…</p>';
+  const q=new URLSearchParams({from:pts[0].join(','),to:pts[1].join(','),mode:$('mode').value,profile:$('profile').value,hour:$('hour').value,lang:$('lang').value});
+  const r=await j('/api/route?'+q);
+  layers.slice(2).forEach(l=>map.removeLayer(l));layers=layers.slice(0,2);
+  if(r.error){$('result').innerHTML=`<div class="card" style="border-color:#ef8a2b"><b>Can't plan this trip</b><p class="hint">${r.error}</p></div>`;return}
+  const style={fastest:['--fast','6,8'],balanced:['--bal',null],cleanest:['--clean',null]};
+  for(const k of['cleanest','balanced','fastest']){const R=r.routes[k];  // widest first, so thinner lines stay visible on top
+    const c=getComputedStyle(document.documentElement).getPropertyValue(style[k][0]);
+    layers.push(L.polyline(R.coords,{color:c,weight:k=='cleanest'?8:k=='balanced'?5:4,opacity:k=='cleanest'?.6:.95,dashArray:style[k][1]}).addTo(map).bindTooltip(`${k}: ${R.minutes} min · ${R.dose_ug} µg inhaled`));}
+  map.fitBounds(L.latLngBounds(r.routes.fastest.coords).pad(.2));
+  const sw={fastest:'border-top:3px dashed var(--fast)',balanced:'border-top:4px solid var(--bal)',cleanest:'border-top:5px solid var(--clean)'};
+  const a=r.advisory,rows=['fastest','balanced','cleanest'].map(k=>{const R=r.routes[k];return`<tr><td><span style="display:inline-block;width:22px;vertical-align:middle;margin-right:6px;${sw[k]}"></span>${k}</td><td>${R.minutes}</td><td>${R.km}</td><td>${R.avg_pm25}</td><td>${R.dose_ug}</td></tr>`}).join('');
+  const same=Math.abs(r.routes.fastest.dose_ug-r.routes.cleanest.dose_ug)<0.01;
+  const bt=r.timeline[r.best_departure.hour];
+  const now=r.timeline[Number($('hour').value)]||r.timeline[0];
+  const cut=now.dose_ug?Math.round(100*(1-bt.dose_ug/now.dose_ug)):0;
+  const verdict=same?`<p class="hint"><b>Good news: the fastest route is already the cleanest one</b> — all three routes are the same path here.</p>`
+    :`<p class="hint">The cleanest route cuts inhaled PM2.5 by <b>${r.saving_pct}%</b> vs the fastest.</p>`;
+  const timing=r.best_departure.hour!=Number($('hour').value)&&cut>=5
+    ?`<p class="hint">Leaving at <b>${bt.time.slice(11,16)}</b> instead cuts the dose by a further <b>${cut}%</b>.</p>`:'';
+  $('result').innerHTML=`<div class="card adv" style="border-left-color:${a.color}">
+    <div class="big" style="color:${a.color}">AQI ${a.aqi} · ${a.category_label||a.category}</div>
+    <p>${a.text}</p><div id="aibox"></div><p class="hint">Basis: ${r.basis=='p90'?'worst-likely (p90) forecast for sensitive users':'median forecast'} · ${r.latency_ms} ms</p></div>
+    <div class="card"><table><tr><th>Route</th><th>min</th><th>km</th><th>PM2.5</th><th>µg</th></tr>${rows}</table>
+    ${verdict}${timing}</div>
+    <div class="card"><b>Best time to leave</b><canvas id="tl" height="130"></canvas></div>`;
+  if(timelineChart)timelineChart.destroy();
+  timelineChart=new Chart($('tl'),{type:'bar',data:{labels:r.timeline.map(t=>t.time.slice(11,16)),
+    datasets:[{data:r.timeline.map(t=>t.dose_ug),backgroundColor:r.timeline.map(t=>t.hour==r.best_departure.hour?'#0f6e5c':col(t.avg_pm25)+'99')}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{title:{display:true,text:'µg inhaled'}}}}});
+  askAI(r.facts);
+}
+let GENAI=null,AIJOB=0;
+async function askAI(facts){
+  if(GENAI===null){try{GENAI=await j('/api/genai_status')}catch(e){GENAI={available:false}}}
+  const box=$('aibox');if(!box||!GENAI.available)return;
+  const lang=$('lang').value;
+  if(!(GENAI.languages||[]).includes(lang)){box.innerHTML='<p class="hint">✨ IBM Granite explanations are available in English.</p>';return}
+  box.innerHTML='<button id="aibtn" style="width:auto;margin-top:6px">✨ Explain with IBM Granite (about 1 min)</button>';
+  $('aibtn').onclick=async()=>{
+    const my=++AIJOB;
+    box.innerHTML='<p class="hint">✨ IBM Granite is writing on LinuxONE… you can keep using the map.</p>';
+    const r0=await j('/api/explain',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({facts,lang})});
+    if(r0.status!=='working')return box.innerHTML='';
+    while(true){
+      await new Promise(res=>setTimeout(res,3000));
+      if(my!==AIJOB||$('aibox')!==box)return;
+      const o=await j('/api/explain/'+r0.job);
+      if(o.status==='working'){box.innerHTML=`<p class="hint">✨ IBM Granite is writing on LinuxONE… ${o.elapsed_s} s</p>`;continue}
+      box.innerHTML=o.text?`<div style="background:#f3f7f5;border-radius:8px;padding:8px 10px;margin-top:6px"><div class="hint" style="margin:0 0 3px">✨ Written by ${o.provider} from the facts above · ${(o.ms/1000).toFixed(0)} s</div>${o.text.replace(/</g,'&lt;')}</div>`:'<p class="hint">IBM Granite could not answer this time.</p>';
+      return;
+    }
+  };
+}
+async function loadMetrics(){const m=await j('/api/metrics');if(!m.horizons)return;
+  const rows=Object.entries(m.horizons).map(([h,v])=>`<tr><td>+${h} h</td><td>${v.persistence.MAE}</td><td>${(v.hybrid||v.hgb||v.snapml_boost).MAE}</td><td>${v['skill_vs_persistence_%']}%</td><td>${v.p90_coverage}</td></tr>`).join('');
+  $('metrics').innerHTML=`<b>Model validation</b><p class="hint" style="margin:2px 0 6px">Tested on ${m.test_label||'held-out data'} — a period the model never trained on</p><table><tr><th>Horizon</th><th>Persist. MAE</th><th>Model MAE</th><th>Skill</th><th>p90 cov.</th></tr>${rows}</table>
+  <p class="hint">Between-station estimate (leave-one-out) MAE ${m.loso.overall.IDW_MAE} using weighting power ${m.loso.best_power} (city average: ${m.loso.overall.citymean_MAE}) · trained on ${m.platform.machine}</p>`}
+init();
+</script>
+</body>
+</html>

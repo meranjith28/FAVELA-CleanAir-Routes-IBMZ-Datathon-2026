@@ -1,0 +1,76 @@
+{
+  "platform": {
+    "machine": "s390x",
+    "torch": "2.11.0+cpu",
+    "nnpa_available": true
+  },
+  "model": "MLP 128-64-1 predicting the change in log PM2.5 from now (clipped inputs/outputs), trained on CPU; inference on CPU and on NNPA",
+  "runs": [
+    {
+      "horizon_h": 1,
+      "test_period": "01 Dec 2025 - 28 Feb 2026",
+      "n_train": 88209,
+      "n_test": 12021,
+      "train_seconds_cpu": 4.9,
+      "mae_persistence": 10.52,
+      "cpu": {
+        "mae": 10.13,
+        "batch_ms": 8.79,
+        "single_request_ms": 0.034
+      },
+      "nnpa": {
+        "mae": 10.13,
+        "batch_ms": 0.38,
+        "single_request_ms": 0.031,
+        "mean_abs_diff_vs_cpu_ug_m3": 0.0153,
+        "p99_abs_diff_vs_cpu_ug_m3": 0.129,
+        "max_abs_diff_vs_cpu_ug_m3": 2.221
+      },
+      "nnpa_speedup_batch": 23.18
+    },
+    {
+      "horizon_h": 6,
+      "test_period": "01 Dec 2025 - 28 Feb 2026",
+      "n_train": 86568,
+      "n_test": 11700,
+      "train_seconds_cpu": 4.2,
+      "mae_persistence": 23.62,
+      "cpu": {
+        "mae": 20.54,
+        "batch_ms": 8.29,
+        "single_request_ms": 0.035
+      },
+      "nnpa": {
+        "mae": 20.56,
+        "batch_ms": 0.41,
+        "single_request_ms": 0.03,
+        "mean_abs_diff_vs_cpu_ug_m3": 0.0646,
+        "p99_abs_diff_vs_cpu_ug_m3": 0.387,
+        "max_abs_diff_vs_cpu_ug_m3": 1.295
+      },
+      "nnpa_speedup_batch": 20.07
+    },
+    {
+      "horizon_h": 24,
+      "test_period": "01 Dec 2025 - 28 Feb 2026",
+      "n_train": 84373,
+      "n_test": 11181,
+      "train_seconds_cpu": 4.0,
+      "mae_persistence": 24.67,
+      "cpu": {
+        "mae": 25.27,
+        "batch_ms": 7.91,
+        "single_request_ms": 0.035
+      },
+      "nnpa": {
+        "mae": 25.3,
+        "batch_ms": 0.39,
+        "single_request_ms": 0.031,
+        "mean_abs_diff_vs_cpu_ug_m3": 0.08,
+        "p99_abs_diff_vs_cpu_ug_m3": 0.47,
+        "max_abs_diff_vs_cpu_ug_m3": 1.847
+      },
+      "nnpa_speedup_batch": 20.12
+    }
+  ]
+}

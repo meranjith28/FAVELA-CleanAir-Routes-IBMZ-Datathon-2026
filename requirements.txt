@@ -1,0 +1,9 @@
+pandas>=1.5
+numpy>=1.23
+scikit-learn>=1.2
+networkx>=3.0
+flask>=2.3
+requests>=2.28
+joblib>=1.2
+openpyxl>=3.1
+# optional: IBM Snap ML booster (s390x wheels available) -> pip install snapml
