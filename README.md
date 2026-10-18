@@ -19,6 +19,8 @@ People cannot tell when air quality will worsen or which routes expose them to m
 9. **IBM z17 AI accelerator:** a neural forecaster is run on the on-chip **Integrated Accelerator for AI (NNPA)** via `torch_nnpa`, benchmarked against the CPU (`scripts/nnpa_benchmark.py`).
 
 ## Architecture
+![CleanAir Routes architecture](docs/architecture.png)
+
 ```
 CPCB / TNPCB stations (via OpenAQ API) ─┐
 Open-Meteo weather (history + forecast) ┼─► features ─► 5 horizon models + calibrated p90 ─► 24 h forecast per station
@@ -134,5 +136,22 @@ Dockerfile             container for LinuxONE
 ```
 
 ## Open-source used
-pandas · NumPy · scikit-learn · NetworkX · Flask · Requests · joblib · openpyxl · PyTorch · torch_nnpa · llama-cpp-python · IBM Granite 3.3 · Leaflet · Chart.js.
-Data: OpenAQ (CC BY 4.0), Open-Meteo (CC BY 4.0), OpenStreetMap (ODbL), CPCB / TNPCB / AirNow station data.
+| Library / resource | Link | Used for |
+|---|---|---|
+| pandas | https://pandas.pydata.org | data cleaning and features |
+| NumPy | https://numpy.org | numerical work |
+| scikit-learn | https://scikit-learn.org | gradient-boosting forecast models, quantile model |
+| PyTorch | https://pytorch.org | neural forecaster |
+| torch_nnpa / IBM zDNN plugin | provided in the LinuxONE Community Cloud Jupyter image: https://github.com/linuxone-community-cloud/jupyter-lab-ml | running the neural forecaster on the IBM z17 AI accelerator |
+| llama-cpp-python | https://github.com/abetlen/llama-cpp-python | running IBM Granite locally |
+| IBM Granite 3.3 2B Instruct | https://huggingface.co/ibm-granite/granite-3.3-2b-instruct | GenAI advice and officials' bulletin (big-endian GGUF build from the LinuxONE lab) |
+| NetworkX | https://networkx.org | road graph and shortest paths |
+| Flask | https://flask.palletsprojects.com | web app and API |
+| Requests | https://requests.readthedocs.io | data downloads |
+| joblib | https://joblib.readthedocs.io | saving models |
+| openpyxl | https://openpyxl.readthedocs.io | reading CPCB Excel exports |
+| Leaflet | https://leafletjs.com | interactive map |
+| Chart.js | https://www.chartjs.org | charts |
+| Docker | https://www.docker.com | container on LinuxONE |
+
+**Data sources:** [OpenAQ](https://openaq.org) (CC BY 4.0) carrying CPCB / TNPCB and AirNow (US Consulate Chennai) monitor data · [Open-Meteo](https://open-meteo.com) (CC BY 4.0) · [OpenStreetMap](https://www.openstreetmap.org/copyright) (ODbL) via the [Overpass API](https://overpass-api.de).
